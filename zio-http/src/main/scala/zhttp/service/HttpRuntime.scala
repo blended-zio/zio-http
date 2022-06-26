@@ -17,8 +17,7 @@ final class HttpRuntime[+R](strategy: HttpRuntime.Strategy[R]) {
   def unsafeRun(ctx: ChannelHandlerContext)(program: ZIO[R, Throwable, Any]): Unit = {
 
     val (executor, rtm) = strategy.runtime(ctx)
-    val layer = Runtime.setExecutor(executor)
-    val pgm = program.provideSomeLayer[R](layer)
+    val pgm = program.provideSomeLayer[R](Runtime.setExecutor(executor))
 
     // Close the connection if the program fails
     // When connection closes, interrupt the program
@@ -46,7 +45,7 @@ final class HttpRuntime[+R](strategy: HttpRuntime.Strategy[R]) {
 
   def unsafeRunUninterruptible(ctx: ChannelHandlerContext)(program: ZIO[R, Throwable, Any]): Unit = {
     val (executor, rtm) = strategy.runtime(ctx)
-    val pgm = program.provideSomeLayer(Runtime.setExecutor(executor))
+    val pgm = program.provideSomeLayer[R](Runtime.setExecutor(executor))
 
     Unsafe.unsafeCompat { implicit u =>
       rtm.unsafe.fork(pgm).unsafe.addObserver {
